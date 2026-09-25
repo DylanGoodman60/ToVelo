@@ -1,3 +1,4 @@
+data/
 bikeshare-ridership-2025
 clean
 .venv
@@ -6,3 +7,5 @@ trips_clean.parquet
 bikeshare.duckdb
 bikeshare
 .attach_str
+supabase/snippets/*
+supabase/snippets/
