@@ -1,0 +1,8 @@
+bikeshare-ridership-2025
+clean
+.venv
+.env
+trips_clean.parquet
+bikeshare.duckdb
+bikeshare
+.attach_str

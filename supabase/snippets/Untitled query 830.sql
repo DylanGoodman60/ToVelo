@@ -1,0 +1,1 @@
+select distinct bike_model from trips;
