@@ -1,0 +1,83 @@
+.bike-marker {
+  position: relative;
+  width: fit-content;
+}
+
+.maplibregl-marker:has(.bike-marker:hover),
+.maplibregl-marker:has(.bike-marker:focus-within) {
+  z-index: 1000 !important;
+}
+
+.maplibregl-marker:has(.bike-marker.bike-marker--open) {
+  z-index: 2000 !important;
+}
+
+.bike-marker__button {
+  display: grid;
+  place-items: center;
+  padding: 4px;
+  border: 2px solid #d6e2dc;
+  border-radius: 9999px;
+  background: white;
+  cursor: pointer;
+  transition: background-color 200ms ease, transform 200ms ease;
+}
+
+.bike-marker__button:hover,
+.bike-marker__button:focus-visible {
+  background: #e5e7eb;
+  transform: scale(1.15);
+}
+
+.bike-marker__menu {
+  position: absolute;
+  z-index: 1001;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  display: flex;
+  min-width: max-content;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+  padding: 10px 12px;
+  border: 1px solid #d6e2dc;
+  border-radius: 10px;
+  background: white;
+  box-shadow: 0 6px 18px rgb(33 52 46 / 18%);
+  color: #21342e;
+  font: 13px/1.35 "Avenir Next", "Segoe UI", sans-serif;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, 4px);
+  transition: opacity 160ms ease, transform 160ms ease, visibility 160ms;
+  visibility: hidden;
+}
+
+.bike-marker:hover .bike-marker__menu,
+.bike-marker:focus-within .bike-marker__menu,
+.bike-marker--open .bike-marker__menu {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate(-50%, 0);
+  visibility: visible;
+}
+
+.bike-marker__menu strong {
+  font-weight: 700;
+}
+
+.bike-marker__menu span {
+  color: #71817a;
+  font-size: 11px;
+}
+
+.bike-marker__close {
+  margin-top: 3px;
+  padding: 3px 8px;
+  border: 0;
+  border-radius: 5px;
+  background: #e9efeb;
+  color: #214c3f;
+  cursor: pointer;
+  font: inherit;
+}
