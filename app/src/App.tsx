@@ -40,7 +40,7 @@ function App() {
               longitude={station.lon}
               latitude={station.lat}
             >
-              <Bike size={32} color="#167d5a" aria-label="Bike hub" />
+              <Bike size={16} color="#167d5a" aria-label="Bike hub" />
             </Marker>
           ))}
           </Map>
