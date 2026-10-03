@@ -1,0 +1,95 @@
+.route-stats-panel {
+  padding: 14px;
+  border: 1px solid #cbd6d0;
+  border-radius: 8px;
+  background: rgb(248 250 248 / 96%);
+  box-shadow: 0 8px 24px rgb(33 52 46 / 18%);
+  color: #21342e;
+  font-family: "Avenir Next", "Segoe UI", sans-serif;
+  backdrop-filter: blur(10px);
+}
+
+.route-stats-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.route-stats-panel__eyebrow {
+  margin: 0;
+  color: #71817a;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.route-stats-panel__close {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #53665d;
+  cursor: pointer;
+}
+
+.route-stats-panel__close:hover,
+.route-stats-panel__close:focus-visible {
+  background: #e9efeb;
+}
+
+.route-stats-panel__route {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 4px 0 12px;
+  font-size: 15px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.route-stats-panel__metrics {
+  margin: 0;
+}
+
+.route-stats-panel__metrics > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  border-top: 1px solid #dce5e0;
+}
+
+.route-stats-panel__metrics dt {
+  color: #53665d;
+  font-size: 13px;
+}
+
+.route-stats-panel__metrics dd {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: right;
+}
+
+.route-stats-panel__message,
+.route-stats-panel__error {
+  margin: 12px 0;
+  font-size: 14px;
+}
+
+.route-stats-panel__error {
+  color: #a33628;
+}
+
+.route-stats-panel__note {
+  margin: 12px 0 0;
+  color: #71817a;
+  font-size: 12px;
+  line-height: 1.45;
+}

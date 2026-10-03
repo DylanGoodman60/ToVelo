@@ -5,6 +5,12 @@ export type Station = {
   name: string
   lat: number
   lon: number
+  start_trip_count: number
+  end_trip_count: number
+  round_trip_count: number
+  popularity_order: number | null
+  peak_start_day: number | null
+  peak_start_hour: number | null
 }
 
 export function useStations() {

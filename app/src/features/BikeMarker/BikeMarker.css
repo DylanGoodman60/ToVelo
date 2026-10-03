@@ -8,7 +8,7 @@
   z-index: 1000 !important;
 }
 
-.maplibregl-marker:has(.bike-marker.bike-marker--open) {
+.maplibregl-marker:has(.bike-marker.bike-marker--selected) {
   z-index: 2000 !important;
 }
 
@@ -36,7 +36,7 @@
   background: #167d5a;
 }
 
-.bike-marker__menu {
+.bike-marker__name {
   position: absolute;
   z-index: 1001;
   bottom: calc(100% + 10px);
@@ -60,36 +60,35 @@
   visibility: hidden;
 }
 
-.bike-marker:hover .bike-marker__menu,
-.bike-marker:focus-within .bike-marker__menu,
-.bike-marker--open .bike-marker__menu {
-  opacity: 1;
-  pointer-events: auto;
-  transform: translate(-50%, 0);
-  visibility: visible;
-}
-
-.bike-marker__menu strong {
+.bike-marker__name strong {
   font-weight: 700;
 }
 
-.bike-marker__menu span {
+.bike-marker__name > span {
   color: #71817a;
-  font-size: 11px;
+  font-size: 12px;
 }
 
-.bike-marker__close {
-  margin-top: 3px;
-  padding: 3px 8px;
-  border: 0;
-  border-radius: 5px;
-  background: #e9efeb;
-  color: #214c3f;
-  cursor: pointer;
-  font: inherit;
+.bike-marker__trip-counts {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  color: #71817a;
+  font-size: 12px;
 }
 
-.bike-marker__close:disabled {
-  cursor: wait;
-  opacity: 0.6;
+.bike-marker__name .bike-marker__remove-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: #a34b3e;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.bike-marker:hover .bike-marker__name,
+.bike-marker:focus-within .bike-marker__name {
+  opacity: 1;
+  transform: translate(-50%, 0);
+  visibility: visible;
 }

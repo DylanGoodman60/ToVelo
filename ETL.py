@@ -1,26 +1,42 @@
 """Load trip CSVs and station data into one SQLite db. Safe to re-run.
 
   trips    : every CSV in the folder, fully replaced each run
-  stations : pulled from the bike share API, upserted each run
+    stations : pulled from the bike share API, upserted each run
+    station_stats : rebuilt from valid completed trips each run
 
 Usage: python csv_to_sqlite.py ./data warehouse.db
 """
+import logging
 import sqlite3
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from time import perf_counter
 
 import pandas as pd
 import requests
 
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(message)s",
+)
+logger = logging.getLogger(__name__)
+
 input_dir = Path(sys.argv[1] if len(sys.argv) > 1 else "data")
 db_path = sys.argv[2] if len(sys.argv) > 2 else "warehouse.db"
 STATIONS_URL = "https://tor.publicbikesystem.net/ube/gbfs/v1/en/station_information"
+MIN_TRIP_DURATION_SECONDS = 2
+etl_started = perf_counter()
+
+logger.info("Starting ETL: input_dir=%s database=%s", input_dir, db_path)
 
 
 # ---------- trips: CSVs -> one table (full replace) ----------
 frames = []
-for path in sorted(input_dir.glob("*.csv")):
+csv_paths = sorted(input_dir.glob("*.csv"))
+logger.info("Found %d CSV files in %s", len(csv_paths), input_dir)
+
+for path in csv_paths:
     df = pd.read_csv(path, encoding="cp1252")
     df.columns = df.columns.str.lower()
     df["source_file"] = path.name  # tracks which CSV each row came from
@@ -34,27 +50,191 @@ for path in sorted(input_dir.glob("*.csv")):
             f"  expected: {[repr(c) for c in expected]}\n"
             f"  got:      {[repr(c) for c in got]}"
         )
-    print(f"{path.name}: {len(df)} rows, {len(df.columns)} cols")
+    logger.info("Loaded %s: rows=%d columns=%d", path.name, len(df), len(df.columns))
     frames.append(df)
 
 trips = pd.concat(frames, ignore_index=True)
+logger.info("Combined trip data: rows=%d columns=%d", len(trips), len(trips.columns))
 
+trip_stage_started = perf_counter()
+logger.info("Replacing trips table and rebuilding station summaries")
 with sqlite3.connect(db_path) as conn:
     trips.to_sql("trips", conn, if_exists="replace", index=False)
     conn.execute(
         "create index if not exists trips_start_end_station_id_idx "
         "on trips (start_station_id, end_station_id)"
     )
-print(f"trips: {len(trips)} rows loaded")
+    conn.execute(
+        "create index if not exists trips_end_station_id_idx "
+        "on trips (end_station_id)"
+    )
+    conn.execute("""
+        create table if not exists station_stats (
+            station_id        integer primary key,
+            start_trip_count  integer not null,
+            end_trip_count    integer not null,
+            round_trip_count  integer not null,
+            popularity_order  integer not null,
+            peak_start_day    integer,
+            peak_start_hour   integer
+        )
+    """)
+    station_stats_columns = {
+        row[1] for row in conn.execute("pragma table_info(station_stats)")
+    }
+    for column in ("peak_start_day", "peak_start_hour"):
+        if column not in station_stats_columns:
+            conn.execute(f"alter table station_stats add column {column} integer")
+
+    conn.execute("delete from station_stats")
+    conn.execute("""
+        with start_counts as (
+            select
+                start_station_id as station_id,
+                count(*) as start_trip_count,
+                sum(case when start_station_id = end_station_id then 1 else 0 end) as round_trip_count
+            from trips
+            where start_station_id is not null
+              and end_station_id is not null
+              and end_time is not null
+              and trip_duration > ?
+            group by start_station_id
+        ), end_counts as (
+            select
+                end_station_id as station_id,
+                count(*) as end_trip_count
+            from trips
+            where start_station_id is not null
+              and end_station_id is not null
+              and end_time is not null
+              and trip_duration > ?
+            group by end_station_id
+        ), time_counts as materialized (
+            select
+                start_station_id as station_id,
+                cast(strftime('%w', start_time) as integer) as start_day,
+                cast(strftime('%H', start_time) as integer) as start_hour,
+                count(*) as trip_count
+            from trips
+            where start_station_id is not null
+              and end_station_id is not null
+              and end_time is not null
+              and trip_duration > ?
+              and start_time is not null
+              and strftime('%w', start_time) is not null
+              and strftime('%H', start_time) is not null
+            group by
+                start_station_id,
+                cast(strftime('%w', start_time) as integer),
+                cast(strftime('%H', start_time) as integer)
+        ), hour_counts as (
+            select station_id, start_hour, sum(trip_count) as trip_count
+            from time_counts
+            group by station_id, start_hour
+        ), ranked_hours as (
+            select
+                station_id,
+                start_hour,
+                row_number() over (
+                    partition by station_id
+                    order by trip_count desc, start_hour asc
+                ) as position
+            from hour_counts
+        ), day_counts as (
+            select station_id, start_day, sum(trip_count) as trip_count
+            from time_counts
+            group by station_id, start_day
+        ), ranked_days as (
+            select
+                station_id,
+                start_day,
+                row_number() over (
+                    partition by station_id
+                    order by trip_count desc, start_day asc
+                ) as position
+            from day_counts
+        ), station_ids as (
+            select station_id from start_counts
+            union
+            select station_id from end_counts
+        ), station_counts as (
+            select
+                station_ids.station_id,
+                coalesce(start_counts.start_trip_count, 0) as start_trip_count,
+                coalesce(end_counts.end_trip_count, 0) as end_trip_count,
+                coalesce(start_counts.round_trip_count, 0) as round_trip_count,
+                ranked_days.start_day as peak_start_day,
+                ranked_hours.start_hour as peak_start_hour
+            from station_ids
+            left join start_counts using (station_id)
+            left join end_counts using (station_id)
+            left join ranked_days
+                on ranked_days.station_id = station_ids.station_id
+                and ranked_days.position = 1
+            left join ranked_hours
+                on ranked_hours.station_id = station_ids.station_id
+                and ranked_hours.position = 1
+        ), ranked_station_counts as (
+            select
+                station_id,
+                start_trip_count,
+                end_trip_count,
+                round_trip_count,
+                peak_start_day,
+                peak_start_hour,
+                rank() over (order by start_trip_count + end_trip_count desc) as popularity_order
+            from station_counts
+        )
+        insert into station_stats (
+            station_id,
+            start_trip_count,
+            end_trip_count,
+            round_trip_count,
+            popularity_order,
+            peak_start_day,
+            peak_start_hour
+        )
+        select
+            station_id,
+            start_trip_count,
+            end_trip_count,
+            round_trip_count,
+            popularity_order,
+            peak_start_day,
+            peak_start_hour
+        from ranked_station_counts
+    """, (
+        MIN_TRIP_DURATION_SECONDS,
+        MIN_TRIP_DURATION_SECONDS,
+        MIN_TRIP_DURATION_SECONDS,
+    ))
+    station_summary = conn.execute("""
+        select count(*),
+               coalesce(sum(start_trip_count), 0),
+               coalesce(sum(end_trip_count), 0)
+        from station_stats
+    """).fetchone()
+logger.info(
+    "Trip stage complete: trips=%d stations_with_stats=%d valid_starts=%d "
+    "valid_ends=%d elapsed=%.1fs",
+    len(trips),
+    station_summary[0],
+    station_summary[1],
+    station_summary[2],
+    perf_counter() - trip_stage_started,
+)
 
 
 # ---------- stations: API -> upsert ----------
+station_stage_started = perf_counter()
+logger.info("Fetching current station information from %s", STATIONS_URL)
 resp = requests.get(STATIONS_URL, timeout=30)
 resp.raise_for_status()
 stations = [
     (int(s["station_id"]), s["name"], s["lat"], s["lon"], s.get("capacity"))
     for s in resp.json()["data"]["stations"]
 ]
+logger.info("Station feed returned %d stations", len(stations))
 
 now = datetime.now(timezone.utc)
 now_str = now.isoformat(timespec="seconds")
@@ -85,9 +265,21 @@ with sqlite3.connect(db_path) as conn:
     """, [(*s, now_str) for s in stations])
 
     # anything not seen in the last day gets flagged inactive
-    conn.execute(
-        "update stations set is_active = 0 where last_seen_at < ?", (cutoff_str,)
+    inactive_update = conn.execute(
+        "update stations set is_active = 0 where is_active <> 0 and last_seen_at < ?",
+        (cutoff_str,),
     )
-print(f"stations: {len(stations)} upserted")
+    active_count, total_count = conn.execute(
+        "select sum(is_active = 1), count(*) from stations"
+    ).fetchone()
+logger.info(
+    "Station stage complete: feed_rows=%d active_stations=%d total_stations=%d "
+    "newly_inactivated=%d elapsed=%.1fs",
+    len(stations),
+    active_count or 0,
+    total_count,
+    max(inactive_update.rowcount, 0),
+    perf_counter() - station_stage_started,
+)
 
-print(f"Done -> {db_path}")
+logger.info("ETL complete: database=%s total_elapsed=%.1fs", db_path, perf_counter() - etl_started)

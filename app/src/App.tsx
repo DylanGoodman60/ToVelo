@@ -7,7 +7,10 @@ function App() {
       <header className="topbar">
         <div className="brand">
           <span className="brand-mark" aria-hidden="true" />
-          <span>ToVelo</span>
+          <span className="brand-copy">
+            <strong>Trip Stats</strong>
+            <span>Toronto bike-share station activity | 2024-present</span>
+          </span>
         </div>
         <div className="topbar-location">
           <span className="location-dot" aria-hidden="true" />

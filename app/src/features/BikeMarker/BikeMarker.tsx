@@ -1,63 +1,64 @@
 
-import { Bike } from "lucide-react";
+import { Bike, X } from "lucide-react";
 import "./BikeMarker.css";
 
 type BikeMarkerProps = {
     name: string;
-    lat: number;
-    lon: number;
-    isOpen: boolean;
+    startTripCount: number;
+    endTripCount: number;
+    peakStartDay: number | null;
+    peakStartHour: number | null;
     isSelected: boolean;
-    selectionLabel: string;
-    selectionDisabled: boolean;
-    onToggle: () => void;
     onSelect: () => void;
 };
 
+const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+function formatHour(hour: number | null): string {
+    if (hour === null) return 'Not available';
+
+    const displayHour = hour % 12 || 12;
+    return `${displayHour} ${hour < 12 ? 'AM' : 'PM'}`;
+}
+
 export const BikeMarker = ({
     name,
-    lat,
-    lon,
-    isOpen,
+    startTripCount,
+    endTripCount,
+    peakStartDay,
+    peakStartHour,
     isSelected,
-    selectionLabel,
-    selectionDisabled,
-    onToggle,
     onSelect,
 }: BikeMarkerProps) => {
     return (
         <div
-            className={`bike-marker${isOpen ? " bike-marker--open" : ""}${isSelected ? " bike-marker--selected" : ""}`}
+            className={`bike-marker${isSelected ? " bike-marker--selected" : ""}`}
             onClick={(event) => event.stopPropagation()}
         >
             <button
                 className="bike-marker__button"
                 type="button"
-                aria-label={`${isOpen ? "Close" : "Open"} ${name} station menu`}
-                aria-expanded={isOpen}
-                onClick={onToggle}
+                aria-label={`${isSelected ? "Unselect" : "Select"} ${name} station`}
+                aria-pressed={isSelected}
+                onClick={onSelect}
             >
                 <Bike size={24} color={isSelected ? "#ffffff" : "#167d5a"} aria-hidden="true" />
             </button>
-
-            <div className="bike-marker__menu">
-                {isOpen ? (
-                    <>
-                        <strong>{name}</strong>
-                        <span>{lat.toFixed(5)}, {lon.toFixed(5)}</span>
-                        <button
-                            className="bike-marker__close"
-                            type="button"
-                            disabled={selectionDisabled}
-                            onClick={onSelect}
-                        >
-                            {selectionLabel}
-                        </button>
-                    </>
+            <span className="bike-marker__name">
+                <strong>{name}</strong>
+                {isSelected ? (
+                    <span className="bike-marker__remove-hint">
+                        <X size={12} aria-hidden="true" />
+                        Click to remove
+                    </span>
                 ) : (
-                    <strong>{name}</strong>
+                    <div className="bike-marker__trip-counts">
+                        <span>{startTripCount.toLocaleString()} starts / {endTripCount.toLocaleString()} returns</span>
+                        <span>Peak day: {peakStartDay === null ? 'Not available' : WEEKDAYS[peakStartDay]}</span>
+                        <span>Peak hour: {formatHour(peakStartHour)}</span>
+                    </div>
                 )}
-            </div>
+            </span>
         </div>
     );
 };

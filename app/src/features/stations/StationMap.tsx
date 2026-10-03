@@ -1,7 +1,8 @@
-import Map, { Marker, type MapRef } from 'react-map-gl/maplibre';
-import { useEffect, useRef, useState } from 'react';
+import Map, { Layer, Marker, Source, type MapRef } from 'react-map-gl/maplibre';
+import { useRef, useState } from 'react';
 import { BikeMarker } from '../BikeMarker/BikeMarker';
-import { RouteStatsDialog } from './RouteStatsDialog';
+import { RouteStatsPanel } from './RouteStatsPanel';
+import { StationSelectionPanel } from './StationSelectionPanel';
 import { useRouteTripStats } from './useRouteTripStats';
 import { useStations } from './useStations';
 import type { Station } from './useStations';
@@ -9,7 +10,6 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 
 export function StationMap() {
   const mapRef = useRef<MapRef | null>(null);
-  const [openStationId, setOpenStationId] = useState<number | null>(null);
   const [startStation, setStartStation] = useState<Station | null>(null);
   const [selectedRoute, setSelectedRoute] = useState<{ start: Station; end: Station } | null>(null);
   const routeStats = useRouteTripStats(
@@ -18,22 +18,57 @@ export function StationMap() {
   );
   const { data: stations } = useStations();
 
-  useEffect(() => {
-    if (openStationId === null) return;
+  const handleStationSelect = (station: Station) => {
+    if (selectedRoute?.start.station_id === station.station_id) {
+      setStartStation(selectedRoute.end);
+      setSelectedRoute(null);
+      return;
+    }
 
-    const closeMenuOnOutsideClick = (event: PointerEvent) => {
-      const target = event.target;
-      if (target instanceof Element && !target.closest('.bike-marker')) {
-        setOpenStationId(null);
-      }
-    };
+    if (selectedRoute?.end.station_id === station.station_id) {
+      setSelectedRoute(null);
+      return;
+    }
 
-    document.addEventListener('pointerdown', closeMenuOnOutsideClick);
-    return () => document.removeEventListener('pointerdown', closeMenuOnOutsideClick);
-  }, [openStationId]);
+    if (startStation?.station_id === station.station_id) {
+      setStartStation(null);
+      return;
+    }
+
+    if (!startStation) {
+      setStartStation(station);
+      return;
+    }
+
+    setSelectedRoute({ start: startStation, end: station });
+  };
+
+  const handleRemoveStation = (stationId: number) => {
+    if (selectedRoute?.end.station_id === stationId) {
+      setSelectedRoute(null);
+      return;
+    }
+
+    if (selectedRoute?.start.station_id === stationId) {
+      setStartStation(selectedRoute.end);
+      setSelectedRoute(null);
+      return;
+    }
+
+    if (startStation?.station_id === stationId) {
+      setStartStation(null);
+    }
+  };
+
+  const handleSwapStations = () => {
+    if (!selectedRoute) return;
+
+    setStartStation(selectedRoute.end);
+    setSelectedRoute({ start: selectedRoute.end, end: selectedRoute.start });
+  };
 
   const handleStationClick = (station: Station) => {
-    setOpenStationId((currentId) => currentId === station.station_id ? null : station.station_id);
+    handleStationSelect(station);
     mapRef.current?.flyTo({
       center: [station.lon, station.lat],
       zoom: 14,
@@ -42,23 +77,30 @@ export function StationMap() {
     });
   };
 
-  const handleStationSelect = (station: Station) => {
-    setOpenStationId(null);
-
-    if (!startStation || station.station_id === startStation.station_id) {
-      setStartStation(startStation ? null : station);
-      return;
-    }
-
-    setSelectedRoute({ start: startStation, end: station });
-  };
-
   const closeRouteStats = () => {
     setSelectedRoute(null);
   };
 
   return (
     <>
+      <div className="station-selection-stack">
+        <StationSelectionPanel
+          startStation={startStation}
+          endStation={selectedRoute?.end ?? null}
+          onRemoveStation={handleRemoveStation}
+          onSwap={handleSwapStations}
+        />
+        {selectedRoute && (
+          <RouteStatsPanel
+            startStationName={selectedRoute.start.name}
+            endStationName={selectedRoute.end.name}
+            stats={routeStats.data}
+            isLoading={routeStats.isLoading}
+            errorMessage={routeStats.error instanceof Error ? routeStats.error.message : routeStats.error ? 'Unable to load route statistics.' : null}
+            onClose={closeRouteStats}
+          />
+        )}
+      </div>
       <Map
         ref={mapRef}
         initialViewState={{
@@ -67,45 +109,64 @@ export function StationMap() {
           zoom: 10,
         }}
         style={{ width: '100%', height: '100%' }}
-        mapStyle="https://tiles.openfreemap.org/styles/liberty"
+        mapStyle="https://tiles.openfreemap.org/styles/bright"
       >
+        {selectedRoute && (
+          <Source
+            id="selected-station-route"
+            type="geojson"
+            data={{
+              type: 'Feature',
+              properties: {},
+              geometry: {
+                type: 'LineString',
+                coordinates: [
+                  [selectedRoute.start.lon, selectedRoute.start.lat],
+                  [selectedRoute.end.lon, selectedRoute.end.lat],
+                ],
+              },
+            }}
+          >
+            <Layer
+              id="selected-station-route-line"
+              type="line"
+              layout={{
+                'line-cap': 'round',
+                'line-join': 'round',
+              }}
+              paint={{
+                'line-color': '#167d5a',
+                'line-width': 2,
+                'line-opacity': 0.65,
+                'line-dasharray': [2, 1.5],
+              }}
+            />
+          </Source>
+        )}
         {stations?.map((station) => {
-          const isOpen = openStationId === station.station_id;
-          const isSelected = startStation?.station_id === station.station_id;
+          const isSelected = startStation?.station_id === station.station_id
+            || selectedRoute?.end.station_id === station.station_id;
 
           return (
             <Marker
               key={station.station_id}
               longitude={station.lon}
               latitude={station.lat}
-              style={{ zIndex: isOpen ? 1000 : undefined }}
             >
               <BikeMarker
                 name={station.name}
-                lat={station.lat}
-                lon={station.lon}
-                isOpen={isOpen}
+                startTripCount={station.start_trip_count}
+                endTripCount={station.end_trip_count}
+                peakStartDay={station.peak_start_day}
+                peakStartHour={station.peak_start_hour}
                 isSelected={isSelected}
-                selectionLabel={isSelected ? 'Clear start' : startStation ? 'Select as destination' : 'Select as start'}
-                selectionDisabled={routeStats.isFetching}
-                onToggle={() => handleStationClick(station)}
-                onSelect={() => handleStationSelect(station)}
+                onSelect={() => handleStationClick(station)}
               />
             </Marker>
           );
         })}
       </Map>
 
-      {selectedRoute && (
-        <RouteStatsDialog
-          startStationName={selectedRoute.start.name}
-          endStationName={selectedRoute.end.name}
-          stats={routeStats.data}
-          isLoading={routeStats.isLoading}
-          errorMessage={routeStats.error instanceof Error ? routeStats.error.message : routeStats.error ? 'Unable to load route statistics.' : null}
-          onClose={closeRouteStats}
-        />
-      )}
     </>
   );
 }

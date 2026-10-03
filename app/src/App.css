@@ -31,9 +31,31 @@
   align-items: center;
   gap: 10px;
   width: fit-content;
+  min-width: 0;
   font-family: Georgia, "Times New Roman", serif;
-  font-size: 20px;
   font-weight: 700;
+}
+
+.brand-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.brand-copy strong {
+  font-size: 18px;
+  line-height: 1.1;
+}
+
+.brand-copy > span {
+  overflow: hidden;
+  color: var(--quiet);
+  font-family: "Avenir Next", "Segoe UI", sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .brand-mark {
@@ -60,7 +82,7 @@
   align-items: center;
   gap: 9px;
   color: var(--quiet);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
 }
 
@@ -113,11 +135,18 @@
 
   .brand {
     gap: 8px;
-    font-size: 18px;
+  }
+
+  .brand-copy strong {
+    font-size: 15px;
+  }
+
+  .brand-copy > span {
+    display: none;
   }
 
   .topbar-location {
-    font-size: 10px;
+    font-size: 12px;
   }
 
   .map-stage {

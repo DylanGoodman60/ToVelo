@@ -8,7 +8,6 @@ from pathlib import Path
 
 from fastapi import FastAPI
 
-# warehouse.db lives in the project root, one level above api/
 DB_PATH = Path(__file__).resolve().parent.parent / "warehouse.db"
 MIN_TRIP_DURATION_SECONDS = 2
 
@@ -42,7 +41,22 @@ def query(sql: str, params: dict | tuple = ()) -> list[dict]:
 @app.get("/api/stations")
 def get_stations():
     return query(
-        "select station_id, name, lat, lon from stations where is_active = 1"
+        """
+        select
+            stations.station_id,
+            stations.name,
+            stations.lat,
+            stations.lon,
+            coalesce(station_stats.start_trip_count, 0) as start_trip_count,
+            coalesce(station_stats.end_trip_count, 0) as end_trip_count,
+            coalesce(station_stats.round_trip_count, 0) as round_trip_count,
+            station_stats.popularity_order,
+            station_stats.peak_start_day,
+            station_stats.peak_start_hour
+        from stations
+        left join station_stats using (station_id)
+        where stations.is_active = 1
+        """
     )
 
 
