@@ -29,6 +29,13 @@
   transform: scale(1.15);
 }
 
+.bike-marker--selected .bike-marker__button,
+.bike-marker--selected .bike-marker__button:hover,
+.bike-marker--selected .bike-marker__button:focus-visible {
+  border-color: #167d5a;
+  background: #167d5a;
+}
+
 .bike-marker__menu {
   position: absolute;
   z-index: 1001;
@@ -80,4 +87,9 @@
   color: #214c3f;
   cursor: pointer;
   font: inherit;
+}
+
+.bike-marker__close:disabled {
+  cursor: wait;
+  opacity: 0.6;
 }

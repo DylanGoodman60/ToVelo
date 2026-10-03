@@ -7,14 +7,27 @@ type BikeMarkerProps = {
     lat: number;
     lon: number;
     isOpen: boolean;
+    isSelected: boolean;
+    selectionLabel: string;
+    selectionDisabled: boolean;
     onToggle: () => void;
-    onClose: () => void;
+    onSelect: () => void;
 };
 
-export const BikeMarker = ({ name, lat, lon, isOpen, onToggle, onClose }: BikeMarkerProps) => {
+export const BikeMarker = ({
+    name,
+    lat,
+    lon,
+    isOpen,
+    isSelected,
+    selectionLabel,
+    selectionDisabled,
+    onToggle,
+    onSelect,
+}: BikeMarkerProps) => {
     return (
         <div
-            className={`bike-marker${isOpen ? " bike-marker--open" : ""}`}
+            className={`bike-marker${isOpen ? " bike-marker--open" : ""}${isSelected ? " bike-marker--selected" : ""}`}
             onClick={(event) => event.stopPropagation()}
         >
             <button
@@ -24,10 +37,10 @@ export const BikeMarker = ({ name, lat, lon, isOpen, onToggle, onClose }: BikeMa
                 aria-expanded={isOpen}
                 onClick={onToggle}
             >
-                <Bike size={24} color="#167d5a" aria-hidden="true" />
+                <Bike size={24} color={isSelected ? "#ffffff" : "#167d5a"} aria-hidden="true" />
             </button>
 
-            <div className="bike-marker__menu" role="status">
+            <div className="bike-marker__menu">
                 {isOpen ? (
                     <>
                         <strong>{name}</strong>
@@ -35,9 +48,10 @@ export const BikeMarker = ({ name, lat, lon, isOpen, onToggle, onClose }: BikeMa
                         <button
                             className="bike-marker__close"
                             type="button"
-                            onClick={onClose}
+                            disabled={selectionDisabled}
+                            onClick={onSelect}
                         >
-                            Close
+                            {selectionLabel}
                         </button>
                     </>
                 ) : (

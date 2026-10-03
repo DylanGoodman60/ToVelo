@@ -1,3 +1,4 @@
+*.db
 data/
 bikeshare-ridership-2025
 clean
