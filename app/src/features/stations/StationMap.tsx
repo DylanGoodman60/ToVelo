@@ -6,7 +6,15 @@ import { StationSelectionPanel } from './StationSelectionPanel';
 import { useRouteTripStats } from './useRouteTripStats';
 import { useStations } from './useStations';
 import type { Station } from './useStations';
+import { setWorkerUrl } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
+
+// maplibre 6 loads its worker from separate files that Vite doesn't emit on its own (see
+// maplibreWorkerFiles in vite.config.ts), so in prod the request falls through to index.html.
+// In dev the worker already sits next to maplibre in node_modules, so the default works.
+if (import.meta.env.PROD) {
+  setWorkerUrl(`${import.meta.env.BASE_URL}maplibre/maplibre-gl-worker.mjs`);
+}
 
 export function StationMap() {
   const mapRef = useRef<MapRef | null>(null);
