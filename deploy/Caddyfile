@@ -6,14 +6,11 @@
 	}
 }
 
-{$DOMAIN}, www.{$DOMAIN} {
+{$DOMAIN} {
 	# Cloudflare Origin CA certificate (SSL/TLS > Origin Server in the Cloudflare dashboard)
 	tls /certs/origin.pem /certs/origin.key
 
 	encode zstd gzip
-
-	@www host www.{$DOMAIN}
-	redir @www https://{$DOMAIN}{uri} permanent
 
 	handle /api/* {
 		reverse_proxy api:8000 {
