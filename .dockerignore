@@ -1,0 +1,16 @@
+# keep the build context small: the DB is mounted at runtime, never baked into an image
+*.db
+*.duckdb
+*.parquet
+data/
+supabase/
+.venv/
+node_modules/
+**/node_modules/
+**/__pycache__/
+app/dist/
+certs/
+.git/
+.env
+.attach_str
+.DS_Store

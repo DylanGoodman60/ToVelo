@@ -1,0 +1,43 @@
+# On the VM:  DOMAIN=example.com docker compose up -d --build
+# Expects warehouse.db in $DATA_DIR and the Cloudflare origin cert in $CERTS_DIR.
+x-logging: &logging
+  driver: local
+  options:
+    max-size: 10m
+    max-file: "3"
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: api/Dockerfile
+    restart: unless-stopped
+    volumes:
+      - ${DATA_DIR:-/mnt/disks/data}:/data:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    logging: *logging
+
+  web:
+    build:
+      context: .
+      dockerfile: deploy/web.Dockerfile
+    restart: unless-stopped
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN, e.g. DOMAIN=example.com}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ${CERTS_DIR:-/etc/tovelo/certs}:/certs:ro
+      - caddy_data:/data
+    depends_on:
+      api:
+        condition: service_healthy
+    logging: *logging
+
+volumes:
+  caddy_data:

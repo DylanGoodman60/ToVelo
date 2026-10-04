@@ -1,4 +1,5 @@
 import { StationMap } from '@/features/stations/StationMap'
+import logo from '@/assets/InBug-Black.png'
 import './App.css';
 
 function App() {
@@ -6,17 +7,23 @@ function App() {
     <div className="app-shell">
       <header className="topbar">
         <div className="brand">
-          <span className="brand-mark" aria-hidden="true" />
           <span className="brand-copy">
-            <strong>Trip Stats</strong>
-            <span>Toronto bike-share station activity | 2024-present</span>
+            <strong>Route Stats</strong>
+            <span>Toronto bike share station activity (2024-present)</span>
           </span>
         </div>
-        <div className="topbar-location">
-          <span className="location-dot" aria-hidden="true" />
-          <span>TORONTO, ON</span>
+        <div className='flex items-center gap-2'>
+          <a
+            className='topbar-link'
+            href="https://www.linkedin.com/in/dylan-jr-goodman/"
+            target="_blank"
+            rel="noreferrer"
+            aria-label="LinkedIn profile"
+            title="LinkedIn"
+          >
+            <img src={logo} alt="LinkedIn Profile" width="36" height="36" />
+          </a> 
         </div>
-        <div className="topbar-menu-space" aria-hidden="true" />
       </header>
       <main className="map-stage" aria-label="Toronto map">
         <div className="map-frame">

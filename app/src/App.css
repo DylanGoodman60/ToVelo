@@ -18,8 +18,8 @@
 }
 
 .topbar {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  display: flex;
+  justify-content: space-between;
   align-items: center;
   padding-inline: clamp(18px, 3vw, 42px);
   border-bottom: 1px solid var(--edge);
@@ -94,9 +94,15 @@
   box-shadow: 0 0 0 4px #f6e6df;
 }
 
-.topbar-menu-space {
-  min-width: 40px;
-  min-height: 40px;
+.topbar-link {
+  border-radius: 10px;
+  max-width: 40px;
+  transition: background-color 140ms ease, border-color 140ms ease;
+}
+
+.topbar-link:hover,
+.topbar-link:focus-visible {
+  background-color: #babbba7e;
 }
 
 .map-stage {
@@ -147,6 +153,19 @@
 
   .topbar-location {
     font-size: 12px;
+  }
+
+  .topbar-menu-space {
+    gap: 6px;
+  }
+
+  .topbar-link {
+    width: 38px;
+    padding: 0;
+  }
+
+  .topbar-link span {
+    display: none;
   }
 
   .map-stage {
