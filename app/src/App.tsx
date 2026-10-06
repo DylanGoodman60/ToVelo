@@ -1,5 +1,6 @@
 import { StationMap } from '@/features/stations/StationMap'
 import logo from '@/assets/InBug-Black.png'
+import gh from '@/assets/GitHub_Invertocat_Black.png'
 import './App.css';
 
 function App() {
@@ -12,7 +13,17 @@ function App() {
             <span>Toronto bike share station activity (2024-present)</span>
           </span>
         </div>
-        <div className='flex items-center gap-2'>
+        <div className='flex items-center gap-6'>
+          <a
+            className='topbar-link'
+            href="https://github.com/DylanGoodman60/bike-share-route-stats"
+            target="_blank"
+            rel="noreferrer"
+            aria-label="GitHub profile"
+            title="GitHub"
+          >
+            <img src={gh} alt="GitHub" width="36" height="36" />
+          </a> 
           <a
             className='topbar-link'
             href="https://www.linkedin.com/in/dylan-jr-goodman/"
