@@ -41,6 +41,14 @@ function App() {
           <StationMap />
         </div>
       </main>
+      <footer className="footer">
+        Fan project. Not affiliated with Bike Share Toronto.
+        <br />
+        Made by{' '}
+        <a href="https://dylangoodman.ca" target="_blank" rel="noreferrer">
+          Dylan Goodman
+        </a>
+      </footer>
     </div>
   );
 }
