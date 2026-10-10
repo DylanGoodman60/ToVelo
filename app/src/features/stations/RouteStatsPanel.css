@@ -53,6 +53,41 @@
   overflow-wrap: anywhere;
 }
 
+.route-stats-panel__section-title {
+  margin: 0 0 6px;
+  color: #71817a;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.route-stats-panel__fastest {
+  margin: 0 0 12px;
+  padding-left: 20px;
+}
+
+.route-stats-panel__fastest li {
+  padding: 4px 0;
+}
+
+.route-stats-panel__fastest li::marker {
+  color: #71817a;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.route-stats-panel__fastest-duration {
+  display: block;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.route-stats-panel__fastest-detail {
+  display: block;
+  color: #53665d;
+  font-size: 12px;
+}
+
 .route-stats-panel__metrics {
   margin: 0;
 }

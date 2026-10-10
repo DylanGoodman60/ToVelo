@@ -1,3 +1,4 @@
+import { Show, SignInButton, SignUpButton, UserButton } from '@clerk/react'
 import { StationMap } from '@/features/stations/StationMap'
 import logo from '@/assets/InBug-Black.png'
 import gh from '@/assets/GitHub_Invertocat_Black.png'
@@ -9,11 +10,18 @@ function App() {
       <header className="topbar">
         <div className="brand">
           <span className="brand-copy">
-            <strong>Route Stats</strong>
+            <strong>Bike Share Bounty</strong>
             <span>Toronto bike share station activity (2024-present)</span>
           </span>
         </div>
         <div className='flex items-center gap-6'>
+          <Show when="signed-out">
+            <SignInButton />
+            <SignUpButton />
+          </Show>
+          <Show when="signed-in">
+            <UserButton />
+          </Show>
           <a
             className='topbar-link'
             href="https://github.com/DylanGoodman60/bike-share-route-stats"

@@ -3,6 +3,7 @@
   trips    : every CSV in the folder, fully replaced each run
     stations : pulled from the bike share API, upserted each run
     station_stats : rebuilt from valid completed trips each run
+    trips.distance_km : straight-line (haversine) start->end distance, filled after stations load
 
 Usage: python csv_to_sqlite.py ./data warehouse.db
 """
@@ -13,6 +14,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from time import perf_counter
 
+import numpy as np
 import pandas as pd
 import requests
 
@@ -26,6 +28,7 @@ input_dir = Path(sys.argv[1] if len(sys.argv) > 1 else "data")
 db_path = sys.argv[2] if len(sys.argv) > 2 else "warehouse.db"
 STATIONS_URL = "https://tor.publicbikesystem.net/ube/gbfs/v1/en/station_information"
 MIN_TRIP_DURATION_SECONDS = 2
+EARTH_RADIUS_KM = 6371.0088
 etl_started = perf_counter()
 
 logger.info("Starting ETL: input_dir=%s database=%s", input_dir, db_path)
@@ -54,6 +57,9 @@ for path in csv_paths:
     frames.append(df)
 
 trips = pd.concat(frames, ignore_index=True)
+# missing ids make pandas read these as float64 (3464.0); nullable Int64 stores real integers
+for column in ("start_station_id", "end_station_id"):
+    trips[column] = trips[column].astype("Int64")
 logger.info("Combined trip data: rows=%d columns=%d", len(trips), len(trips.columns))
 
 trip_stage_started = perf_counter()
@@ -280,6 +286,63 @@ logger.info(
     total_count,
     max(inactive_update.rowcount, 0),
     perf_counter() - station_stage_started,
+)
+
+# ---------- trip distances: haversine per station pair -> trips.distance_km ----------
+distance_stage_started = perf_counter()
+logger.info("Computing straight-line trip distances")
+
+
+def haversine_km(lat1, lon1, lat2, lon2):
+    """Vectorized great-circle distance in km."""
+    lat1, lon1, lat2, lon2 = map(np.radians, (lat1, lon1, lat2, lon2))
+    a = (
+        np.sin((lat2 - lat1) / 2) ** 2
+        + np.cos(lat1) * np.cos(lat2) * np.sin((lon2 - lon1) / 2) ** 2
+    )
+    return 2 * EARTH_RADIUS_KM * np.arcsin(np.sqrt(np.clip(a, 0.0, 1.0)))
+
+
+with sqlite3.connect(db_path) as conn:
+    # distance only depends on the (start, end) pair, so compute it once per distinct pair
+    pairs = pd.read_sql_query(
+        """
+        select p.start_station_id, p.end_station_id,
+               s.lat as start_lat, s.lon as start_lon,
+               e.lat as end_lat, e.lon as end_lon
+        from (select distinct start_station_id, end_station_id from trips) as p
+        left join stations as s on s.station_id = p.start_station_id
+        left join stations as e on e.station_id = p.end_station_id
+        """,
+        conn,
+    )
+    pairs["distance_km"] = haversine_km(
+        pairs["start_lat"], pairs["start_lon"], pairs["end_lat"], pairs["end_lon"]
+    )  # NaN (-> NULL) when either station is unknown
+    pairs[["start_station_id", "end_station_id", "distance_km"]].to_sql(
+        "route_distances", conn, if_exists="replace", index=False
+    )
+    conn.execute(
+        "create unique index route_distances_pair_idx "
+        "on route_distances (start_station_id, end_station_id)"
+    )
+    conn.execute("alter table trips add column distance_km real")
+    conn.execute("""
+        update trips set distance_km = (
+            select rd.distance_km from route_distances as rd
+            where rd.start_station_id = trips.start_station_id
+              and rd.end_station_id = trips.end_station_id
+        )
+    """)
+    conn.execute("drop table route_distances")
+    missing_distance = conn.execute(
+        "select count(*) from trips where distance_km is null"
+    ).fetchone()[0]
+logger.info(
+    "Distance stage complete: pairs=%d trips_without_distance=%d elapsed=%.1fs",
+    len(pairs),
+    missing_distance,
+    perf_counter() - distance_stage_started,
 )
 
 logger.info("ETL complete: database=%s total_elapsed=%.1fs", db_path, perf_counter() - etl_started)

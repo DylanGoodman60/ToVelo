@@ -1,11 +1,18 @@
 import { useQuery } from "@tanstack/react-query"
 
+export type FastestTrip = {
+  trip_id: number;
+  duration_seconds: number;
+  straight_line_speed_kmh: number | null;
+  start_time: string;
+  end_time: string;
+};
+
 export type RouteTripStats = {
   completed_trip_count: number;
   average_duration_seconds: number | null;
-  tenth_percentile_duration_seconds: number | null;
-  fastest_duration_seconds: number | null;
   average_straight_line_speed_kmh: number | null;
+  fastest_trips: FastestTrip[];
 };
 
 export function useRouteTripStats(start?: number, end?: number) {

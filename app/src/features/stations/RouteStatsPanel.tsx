@@ -24,6 +24,18 @@ function formatDuration(seconds: number | null | undefined): string {
   return `${remainingSeconds} sec`;
 }
 
+function formatSpeed(kmh: number | null | undefined): string {
+  if (kmh == null) return 'Not available';
+  return `${kmh.toFixed(1)} km/h`;
+}
+
+// start_time is a naive local timestamp ("YYYY-MM-DD HH:MM:SS"), so parse it as local time
+function formatTripDate(timestamp: string): string {
+  const date = new Date(timestamp.replace(' ', 'T'));
+  if (Number.isNaN(date.getTime())) return timestamp;
+  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
 export function RouteStatsPanel({
   startStationName,
   endStationName,
@@ -58,32 +70,36 @@ export function RouteStatsPanel({
         <p className="route-stats-panel__message">No completed trips found for this route.</p>
       )}
       {!isLoading && !errorMessage && stats && stats.completed_trip_count > 0 && (
-        <dl className="route-stats-panel__metrics">
-          <div>
-            <dt>Completed trips</dt>
-            <dd>{stats.completed_trip_count.toLocaleString()}</dd>
-          </div>
-          <div>
-            <dt>Average trip time</dt>
-            <dd>{formatDuration(stats.average_duration_seconds)}</dd>
-          </div>
-          <div>
-            <dt>Fastest trip</dt>
-            <dd>{formatDuration(stats.fastest_duration_seconds)}</dd>
-          </div>
-          <div>
-            <dt>Fastest 10% cutoff</dt>
-            <dd>{formatDuration(stats.tenth_percentile_duration_seconds)}</dd>
-          </div>
-          <div>
-            <dt>Estimated average speed</dt>
-            <dd>
-              {stats.average_straight_line_speed_kmh == null
-                ? 'Not available'
-                : `${stats.average_straight_line_speed_kmh.toFixed(1)} km/h`}
-            </dd>
-          </div>
-        </dl>
+        <>
+          <h3 className="route-stats-panel__section-title">Fastest trips</h3>
+          <ol className="route-stats-panel__fastest">
+            {stats.fastest_trips.map((trip) => (
+              <li key={trip.trip_id}>
+                <span className="route-stats-panel__fastest-duration">
+                  {formatDuration(trip.duration_seconds)}
+                </span>
+                <span className="route-stats-panel__fastest-detail">
+                  {formatSpeed(trip.straight_line_speed_kmh)} · {formatTripDate(trip.start_time)}
+                </span>
+              </li>
+            ))}
+          </ol>
+
+          <dl className="route-stats-panel__metrics">
+            <div>
+              <dt>Completed trips</dt>
+              <dd>{stats.completed_trip_count.toLocaleString()}</dd>
+            </div>
+            <div>
+              <dt>Average trip time</dt>
+              <dd>{formatDuration(stats.average_duration_seconds)}</dd>
+            </div>
+            <div>
+              <dt>Estimated average speed</dt>
+              <dd>{formatSpeed(stats.average_straight_line_speed_kmh)}</dd>
+            </div>
+          </dl>
+        </>
       )}
 
       <p className="route-stats-panel__note">
